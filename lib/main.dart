@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 
-void main() {
+import 'task_item.dart';
+import 'task_model.dart';
+
+void main() async {
+  await GetStorage.init();
   runApp(const MyApp());
 }
 
@@ -30,46 +35,129 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  TextEditingController _controller = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  List<TaskModel> tasks = [];
+  final box = GetStorage();
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    readTask();
+  }
+
+  void writeTask() {
+    box.write('task_length', tasks.length);
+    for (int i = 0; i < tasks.length; i++) {
+      box.write('task_$i', tasks[i].toJson);
+    }
+  }
+
+  void readTask() {
+    int? taskLength = box.read('task_length');
+    print(taskLength);
+    if (taskLength != null) {
+      tasks.clear();
+      for (int i = 0; i < taskLength; i++) {
+        var temp = TaskModel.fromJson(box.read('task_$i'));
+        tasks.add(temp);
+      }
+      setState(() {});
+    }
+  }
+
+  void successfulTask(TaskModel task) {
     setState(() {
-      _counter++;
+      if (task.status == 0) {
+        task.status = 1;
+      }
     });
+    box.write('task_${task.id}', task.toJson());
+  }
+
+  void addTask(String task) {
+    TaskModel temp = TaskModel(id: tasks.length, task: task);
+    setState(() {
+      tasks.add(temp);
+    });
+    _controller.text = '';
+    box.write('task_${tasks.length - 1}', temp.toJson());
+    box.write('task_length', tasks.length);
+    int? taskLength = box.read('task_length');
+  }
+
+  void deleteTask(TaskModel task) {
+    setState(() {
+      task.status = -1;
+    });
+    box.write('task_${task.id}', task.toJson());
   }
 
   @override
   Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(10),
-        child: Column(
-          children: <Widget>[
-            const SizedBox(height: 40),
-            Row(
-              children: [
-                const Text('Anh Tu'),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.only(left: 10),
-                    height: 3,
-                    color: Colors.black12,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                )
-              ],
+        child: SizedBox(
+          width: size.width,
+          height: size.height,
+          child: ListView.builder(
+            itemCount: tasks.length,
+            itemBuilder: (context, index) => TaskItem(
+              task: tasks[index],
+              pressSuccessful: () => successfulTask(tasks[index]),
+              pressDelete: () => deleteTask(tasks[index]),
             ),
-          ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: _showMyDialog,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  Future<void> _showMyDialog() async {
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Tạo task mới'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: ListBody(
+                children: <Widget>[
+                  const Text('Nhập task của bạn'),
+                  TextFormField(
+                    controller: _controller,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Vui lòng nhập task của bạn';
+                      }
+                      return null;
+                    },
+                  )
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Thêm'),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  addTask(_controller.text);
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
