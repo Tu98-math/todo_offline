@@ -20,15 +20,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -55,7 +53,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void readTask() {
     int? taskLength = box.read('task_length');
-    print(taskLength);
     if (taskLength != null) {
       tasks.clear();
       for (int i = 0; i < taskLength; i++) {
@@ -83,7 +80,6 @@ class _MyHomePageState extends State<MyHomePage> {
     _controller.text = '';
     box.write('task_${tasks.length - 1}', temp.toJson());
     box.write('task_length', tasks.length);
-    int? taskLength = box.read('task_length');
   }
 
   void deleteTask(TaskModel task) {
@@ -113,14 +109,14 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showMyDialog,
+        onPressed: _showAddTask,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 
-  Future<void> _showMyDialog() async {
+  Future<void> _showAddTask() async {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
